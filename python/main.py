@@ -1,6 +1,9 @@
 import os
 import logging
 import pathlib
+import sqlite3
+
+
 from fastapi import FastAPI, Form, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,15 +20,41 @@ app.add_middleware(
     allow_methods=["GET","POST","PUT","DELETE"],
     allow_headers=["*"],
 )
+    
 
 @app.get("/")
 def root():
+    con = sqlite3.connect("/Users/elyse/mercari-build-training-2022/mercari-build-training-2022/db/items.db")
+    cur = con.cursor()
     return {"message": "Hello, world!"}
 
+@app.get("/items")
+def get_items():
+    con = sqlite3.connect("/Users/elyse/mercari-build-training-2022/mercari-build-training-2022/db/items.db")
+    cur = con.cursor()
+
+    cur.execute('''SELECT * FROM items''')
+    records = list(cur)
+    print(records)
+    con.close()
+    items = []
+    for row in records:
+        items.append("name: " + row[1] + ", category: " + row[2])
+    return "items: " + str(items)
+
 @app.post("/items")
-def add_item(name: str = Form(...)):
-    logger.info(f"Receive item: {name}")
-    return {"message": f"item received: {name}"}
+def add_item(name: str = Form(...), category: str = Form(...)):
+    con = sqlite3.connect("/Users/elyse/mercari-build-training-2022/mercari-build-training-2022/db/items.db")
+    cur = con.cursor()
+    params = (name, category)
+
+    cur.execute('''INSERT INTO items VALUES (NULL, ?, ?)''', (params))
+    con.commit()
+    con.close()
+    logger.info(f"Receive item: {name}, {category}")
+    open
+
+    return {"message": f"item received: {name}, {category}"}
 
 @app.get("/image/{items_image}")
 async def get_image(items_image):
