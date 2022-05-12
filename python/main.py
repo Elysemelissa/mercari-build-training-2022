@@ -72,6 +72,22 @@ async def search_item(keyword: str = Query(...)):
             items.append("name: " + row[1] + ", category: " + row[2])
         return "items: " + str(items)
 
+@app.get("/items/{item_id}") 
+async def read_item(item_id):
+    con = sqlite3.connect("/Users/elyse/mercari-build-training-2022/mercari-build-training-2022/db/items.db")
+    cur = con.cursor()
+    params = item_id
+    cur.execute('''SELECT * FROM items WHERE rowid=(?)''', (params, ))
+
+    records = list(cur)
+    if len(records) == 0:
+        return "This item id does not exist."
+    else:
+        items = []
+        for row in records:
+            items.append("name: " + row[1] + ", category: " + row[2])
+        return "items: " + str(items)
+
 @app.get("/image/{items_image}")
 async def get_image(items_image):
     # Create image path
