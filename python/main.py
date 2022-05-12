@@ -4,7 +4,7 @@ import pathlib
 import sqlite3
 
 
-from fastapi import FastAPI, Form, HTTPException
+from fastapi import FastAPI, Form, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -35,7 +35,6 @@ def get_items():
 
     cur.execute('''SELECT * FROM items''')
     records = list(cur)
-    print(records)
     con.close()
     items = []
     for row in records:
@@ -55,6 +54,23 @@ def add_item(name: str = Form(...), category: str = Form(...)):
     open
 
     return {"message": f"item received: {name}, {category}"}
+
+@app.get("/search")
+async def search_item(keyword: str = Query(...)):
+
+    con = sqlite3.connect("/Users/elyse/mercari-build-training-2022/mercari-build-training-2022/db/items.db")
+    cur = con.cursor()
+    params = keyword
+
+    cur.execute('''SELECT * FROM items WHERE name=(?) OR category=(?)''', (params, params, ))
+    records = list(cur)
+    if len(records) == 0:
+        return "This item or category does not exist."
+    else:
+        items = []
+        for row in records:
+            items.append("name: " + row[1] + ", category: " + row[2])
+        return "items: " + str(items)
 
 @app.get("/image/{items_image}")
 async def get_image(items_image):
