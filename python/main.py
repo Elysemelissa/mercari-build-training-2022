@@ -2,6 +2,7 @@ import os
 import logging
 import pathlib
 import sqlite3
+import hashlib
 
 
 from fastapi import FastAPI, Form, HTTPException, Query
@@ -20,7 +21,6 @@ app.add_middleware(
     allow_methods=["GET","POST","PUT","DELETE"],
     allow_headers=["*"],
 )
-    
 
 @app.get("/")
 def root():
@@ -38,22 +38,25 @@ def get_items():
     con.close()
     items = []
     for row in records:
-        items.append("name: " + row[1] + ", category: " + row[2])
+        items.append("name: " + row[1] + ", category: " + row[2], ", image: " + row[3])
     return "items: " + str(items)
 
 @app.post("/items")
-def add_item(name: str = Form(...), category: str = Form(...)):
+async def add_item(name: str = Form(...), category: str = Form(...), image: str = Form(...)):
     con = sqlite3.connect("/Users/elyse/mercari-build-training-2022/mercari-build-training-2022/db/items.db")
     cur = con.cursor()
-    params = (name, category)
 
-    cur.execute('''INSERT INTO items VALUES (NULL, ?, ?)''', (params))
+    encode = image.encode(encoding = 'UTF-8', errors = 'strict')
+    image_hash = hashlib.sha256(encode).hexdigest() + ".jpg"
+    params = (name, category, image_hash)
+
+    cur.execute('''INSERT INTO items VALUES (NULL, ?, ?, ?)''', (params))
     con.commit()
     con.close()
-    logger.info(f"Receive item: {name}, {category}")
+    logger.info(f"Receive item: {name}, {category}, {image_hash}")
     open
 
-    return {"message": f"item received: {name}, {category}"}
+    return {"message": f"item received: {name}, {category}, {image_hash}"}
 
 @app.get("/search")
 async def search_item(keyword: str = Query(...)):
@@ -69,7 +72,7 @@ async def search_item(keyword: str = Query(...)):
     else:
         items = []
         for row in records:
-            items.append("name: " + row[1] + ", category: " + row[2])
+            items.append("name: " + row[1] + ", category: " + row[2] + ", image: " + row[3])
         return "items: " + str(items)
 
 @app.get("/items/{item_id}") 
@@ -85,7 +88,7 @@ async def read_item(item_id):
     else:
         items = []
         for row in records:
-            items.append("name: " + row[1] + ", category: " + row[2])
+            items.append("name: " + row[1] + ", category: " + row[2] + ", image: " + row[3])
         return "items: " + str(items)
 
 @app.get("/image/{items_image}")
