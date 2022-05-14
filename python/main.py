@@ -35,7 +35,7 @@ def get_items():
     con = sqlite3.connect("/Users/elyse/mercari-build-training-2022/mercari-build-training-2022/db/items.db")
     cur = con.cursor()
 
-    cur.execute('''SELECT * FROM items''')
+    cur.execute('''SELECT i.name, c.name FROM items i INNER JOIN category c ON i.category_id = c.id''')
     records = list(cur)
     con.close()
     items = []
@@ -50,9 +50,12 @@ async def add_item(name: str = Form(...), category: str = Form(...), image: str 
 
     encode = image.encode(encoding = 'UTF-8', errors = 'strict')
     image_hash = hashlib.sha256(encode).hexdigest() + ".jpg"
-    params = (name, category, image_hash)
 
-    cur.execute('''INSERT INTO items VALUES (NULL, ?, ?, ?)''', (params))
+    cur.execute('''INSERT INTO category VALUES (NULL, ?)''', (category, ))
+    con.commit()
+
+    items_params = (name, category, image_hash)
+    cur.execute('''INSERT INTO items VALUES (NULL, ?, (SELECT id FROM category WHERE name = ?), ?)''', (items_params))
     con.commit()
     con.close()
     logger.info(f"Receive item: {name}, {category}, {image_hash}")
