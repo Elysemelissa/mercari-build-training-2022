@@ -1,22 +1,27 @@
-import os
-import logging
-import pathlib
-import sqlite3
-import hashlib
+import os, logging, pathlib, sqlite3, hashlib
 
+# API methods import
+from api_methods.get_all_items import get_all_items
+from api_methods.post_items import post_category, post_name_image
+from api_methods.search_items import search_items
+from api_methods.get_item_by_id import get_item_by_id
 
+from dotenv import load_dotenv
+from pathlib import Path
 from fastapi import FastAPI, Form, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 logger = logging.getLogger("uvicorn")
-# logger.level = logging.INFO
 logger.setLevel(logging.DEBUG)
 
 images = pathlib.Path(__file__).parent.resolve() / "image"
 origins = [ os.environ.get('FRONT_URL', 'http://localhost:3000') ]
-db_path = "/Users/elyse/mercari-build-training-2022/mercari-build-training-2022/db/items.db"
+
+dotenv_path = Path('DB_PATH.env')
+load_dotenv(dotenv_path=dotenv_path)
+DB_PATH = os.getenv("DB_PATH")
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,91 +33,52 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    con = sqlite3.connect(db_path)
-    cur = con.cursor()
     return {"message": "Hello, world!"}
 
 @app.get("/items")
 def get_items():
-    con = sqlite3.connect(db_path)
+    con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
-
-    cur.execute('''SELECT i.name, c.name, i.image 
-                FROM items i 
-                INNER JOIN category c 
-                ON i.category_id = c.id''')
-    records = list(cur)
+    items_list = get_all_items(cur)
     con.close()
-    items = []
-    for row in records:
-        items.append("name: " + row[0] + ", category: " + row[1] + ", image: " + row[2])
-    return "items: " + str(items)
+    
+    return items_list
 
 @app.post("/items")
 async def add_item(name: str = Form(...), category: str = Form(...), image: str = Form(...)):
-    con = sqlite3.connect(db_path)
+    con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
 
-    encode = image.encode(encoding = 'UTF-8', errors = 'strict')
-    image_hash = hashlib.sha256(encode).hexdigest() + ".jpg"
-
-    cur.execute('''INSERT INTO category 
-                VALUES (NULL, ?)''', (category, ))
+    image_hash = encode_image(image)
+    post_category(cur, category)
     con.commit()
-
-    items_params = (name, category, image_hash)
-    cur.execute('''INSERT INTO items 
-                VALUES (NULL, ?, (SELECT id FROM category WHERE name = ?), ?)''', (items_params))
+    
+    post_name_image(cur, name, category, image_hash)
     con.commit()
     con.close()
+    
     logger.info(f"Receive item: {name}, {category}, {image_hash}")
     open
-
     return {"message": f"item received: {name}, {category}, {image_hash}"}
 
 @app.get("/search")
 async def search_item(keyword: str = Query(...)):
-
-    con = sqlite3.connect(db_path)
+    con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
-    params = keyword
 
-    cur.execute('''SELECT i.name, c.name
-                FROM items i 
-                INNER JOIN category c 
-                ON i.category_id = c.id
-                WHERE i.name = ? 
-                OR c.name = ? ''', (params, params, ))
-
-    records = list(cur)
-    print(records)
-    if len(records) == 0:
-        return "This item or category does not exist."
-    else:
-        items = []
-        for row in records:
-            items.append("name: " + row[0] + ", category: " + row[1])
-        return "items: " + str(items)
+    search_query_results = search_items(cur, keyword)
+    con.close()
+    
+    return search_query_results
 
 @app.get("/items/{item_id}") 
 async def read_item(item_id):
-    con = sqlite3.connect(db_path)
+    con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
-    params = item_id
-    cur.execute('''SELECT i.id, i.name, c.name, i.image
-                FROM items i 
-                INNER JOIN category c 
-                ON i.category_id = c.id 
-                WHERE i.id=(?)''', (params, ))
+    search_id_results = get_item_by_id(cur, item_id)
+    con.close()
 
-    records = list(cur)
-    if len(records) == 0:
-        return "This item id does not exist."
-    else:
-        items = []
-        for row in records:
-            items.append("name: " + row[1] + ", category: " + row[2] + ", image: " + row[3])
-        return "items: " + str(items)
+    return search_id_results
 
 @app.get("/image/{items_image}")
 async def get_image(items_image):
@@ -127,3 +93,8 @@ async def get_image(items_image):
         image = images / "default.jpg"
 
     return FileResponse(image)
+
+def encode_image(image):
+    encode = image.encode(encoding = 'UTF-8', errors = 'strict')
+    image_hash = hashlib.sha256(encode).hexdigest() + ".jpg"
+    return image_hash
