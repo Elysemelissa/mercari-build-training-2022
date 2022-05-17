@@ -1,6 +1,6 @@
 # Build@Mercari Training Program 2022
 
-This is @<your github id>'s build training repository.
+This is @Elysemelissa's build training repository.
 
 Build trainingの前半では個人で課題に取り組んでもらい、Web開発の基礎知識をつけていただきます。
 ドキュメントには詳細なやり方は記載しません。自身で検索したり、リファレンスを確認したり、チームメイトと協力して各課題をクリアしましょう。
@@ -14,7 +14,7 @@ The following icons indicate pointers for
 **:book: Reference**
 
 * そのセクションを理解するために参考になるUdemyやサイトのリンクです。課題内容がわからないときにはまずReferenceを確認しましょう。
-* Useful links for Udemy courses and external resources. First check those references if you're feeling stuck.
+* Useful links for Udemy courses and external resources. First check those references if you are feeling stuck.
 
 **:beginner: Point**
 
