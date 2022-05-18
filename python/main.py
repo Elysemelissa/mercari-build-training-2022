@@ -8,7 +8,7 @@ from api_methods.get_item_by_id import get_item_by_id
 
 from dotenv import load_dotenv
 from pathlib import Path
-from fastapi import FastAPI, Form, HTTPException, Query
+from fastapi import FastAPI, Form, File, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -45,21 +45,24 @@ def get_items():
     return items_list
 
 @app.post("/items")
-async def add_item(name: str = Form(...), category: str = Form(...), image: str = Form(...)):
+async def add_item(name: bytes = File(...), category: bytes = File(...), image: bytes = File(...)):
     con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
 
+    name_string = name.decode('utf-8')
+    category_string = category.decode('utf-8')
+
     image_hash = encode_image(image)
-    post_category(cur, category)
+    post_category(cur, category_string)
     con.commit()
     
-    post_name_image(cur, name, category, image_hash)
+    post_name_image(cur, name_string, category_string, image_hash)
     con.commit()
     con.close()
     
-    logger.info(f"Receive item: {name}, {category}, {image_hash}")
+    logger.info(f"Receive item: {name_string}, {category_string}, {image_hash}")
     open
-    return {"message": f"item received: {name}, {category}, {image_hash}"}
+    return {"message": f"item received: {name_string}, {category_string}, {image_hash}"}
 
 @app.get("/search")
 async def search_item(keyword: str = Query(...)):
@@ -91,9 +94,12 @@ async def get_image(image_filename):
     if not image.exists():
         logger.debug(f"Image not found: {image}")
         image = images / "default.jpg"
+    return FileResponse(image)
 
 def encode_image(image):
-    encode = image.encode(encoding = 'UTF-8', errors = 'strict')
-    image_hash = hashlib.sha256(encode).hexdigest() + ".jpg"
+    image_hash = hashlib.sha256(image).hexdigest() + ".jpg"
+    
+    with open("images/" + image_hash, "wb") as file:
+        file.write(image)
     return image_hash
 
