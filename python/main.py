@@ -8,7 +8,7 @@ from api_methods.get_item_by_id import get_item_by_id
 
 from dotenv import load_dotenv
 from pathlib import Path
-from fastapi import FastAPI, Form, File, HTTPException, Query
+from fastapi import FastAPI, File, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -49,9 +49,11 @@ async def add_item(name: bytes = File(...), category: bytes = File(...), image: 
     con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
 
+    # decode from file to string
     name_string = name.decode('utf-8')
     category_string = category.decode('utf-8')
 
+    # encode uploaded image
     image_hash = encode_image(image)
     post_category(cur, category_string)
     con.commit()

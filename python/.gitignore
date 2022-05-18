@@ -1,1 +1,3 @@
 mercari-sqlite3.py
+__pycache__/
+api_methods/__pycache__/
